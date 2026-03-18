@@ -1,19 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>아동안전지킴이집 지도</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+    body { margin: 0; }
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
   var map = L.map('map').setView([37.659, 126.836], 15);
 
-  // 🗺️ 배경지도
-  var vworld = L.tileLayer(
+  // ✅ VWorld
+  L.tileLayer(
     'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
     { maxZoom: 19 }
   ).addTo(map);
 
-  var safehouseLayer;
-  var guLayer;
-  var infantLayer;
+  var safehouseLayer, guLayer, infantLayer;
 
-  // -------------------------
-  // 🔥 색상 함수 (핵심)
-  // -------------------------
+  // 🔥 색상 함수
   function getColor(val) {
     return val >= 100 ? '#800026' :
            val >= 75  ? '#BD0026' :
@@ -24,28 +39,25 @@
   }
 
   // -------------------------
-  // 1️⃣ 유아 인구 (먼저 추가 → 아래에 깔림)
+  // 1️⃣ 유아 인구
   // -------------------------
   fetch('infant.geojson')
     .then(res => res.json())
     .then(data => {
 
       infantLayer = L.geoJSON(data, {
-
         style: function(feature) {
           var val = feature.properties.val || 0;
 
           return {
             fillColor: getColor(val),
-            fillOpacity: val === 0 ? 0 : 0.5, // 0이면 완전 투명
-            color: null, // 테두리 없음
-            weight: 0
+            fillOpacity: val === 0 ? 0 : 0.5,
+            stroke: false   // ✅ 테두리 제거 (이게 정답)
           };
         }
-
       }).addTo(map);
 
-      updateLayerControl();
+      checkReady();
     });
 
   // -------------------------
@@ -66,11 +78,11 @@
         }
       }).addTo(map);
 
-      updateLayerControl();
+      checkReady();
     });
 
   // -------------------------
-  // 3️⃣ 아동안전지킴이집 (맨 위)
+  // 3️⃣ 지킴이집
   // -------------------------
   fetch('safehouse.geojson')
     .then(res => res.json())
@@ -89,13 +101,13 @@
         }
       }).addTo(map);
 
-      updateLayerControl();
+      checkReady();
     });
 
   // -------------------------
   // 레이어 컨트롤
   // -------------------------
-  function updateLayerControl() {
+  function checkReady() {
     if (safehouseLayer && guLayer && infantLayer) {
 
       L.control.layers(null, {
@@ -106,4 +118,8 @@
 
     }
   }
+
 </script>
+
+</body>
+</html>
