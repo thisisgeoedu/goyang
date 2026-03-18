@@ -18,7 +18,7 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 📍 성사고등학교 중심 (WGS84)
+  // 📍 성사고등학교 중심
   var map = L.map('map').setView([37.659, 126.836], 15);
 
   // 🗺️ VWorld 배경지도
@@ -27,15 +27,17 @@
     { maxZoom: 19 }
   ).addTo(map);
 
-  // 📦 GeoJSON 레이어 변수
+  // 📦 레이어 변수들
   var safehouseLayer;
+  var guLayer;
 
-  // 📦 GeoJSON 불러오기
+  // -------------------------
+  // 1️⃣ 아동안전지킴이집 (마커)
+  // -------------------------
   fetch('safehouse.geojson')
     .then(res => res.json())
     .then(data => {
 
-      // ✅ WGS84 그대로 사용 (변환 없음)
       safehouseLayer = L.geoJSON(data, {
 
         pointToLayer: function (feature, latlng) {
@@ -52,15 +54,47 @@
 
       }).addTo(map);
 
-      // ✅ 레이어 ON/OFF (여기 위치 중요)
+      updateLayerControl();
+    });
+
+  // -------------------------
+  // 2️⃣ 구 경계 (폴리곤)
+  // -------------------------
+  fetch('gu.geojson')
+    .then(res => res.json())
+    .then(data => {
+
+      guLayer = L.geoJSON(data, {
+
+        // 🔥 스타일 핵심
+        style: function(feature) {
+          return {
+            color: "#000000",      // 검정선
+            weight: 3,             // 두께 3px
+            dashArray: "6,6",      // 점선
+            fillOpacity: 0         // 내부 투명
+          };
+        }
+
+      }).addTo(map);
+
+      updateLayerControl();
+    });
+
+  // -------------------------
+  // 레이어 컨트롤 (공통)
+  // -------------------------
+  function updateLayerControl() {
+    // 둘 다 로딩된 후 생성
+    if (safehouseLayer && guLayer) {
+
       L.control.layers(null, {
-        "아동안전지킴이집": safehouseLayer
+        "아동안전지킴이집": safehouseLayer,
+        "행정구 경계": guLayer
       }, { collapsed: false }).addTo(map);
 
-    })
-    .catch(err => {
-      console.error("GeoJSON 로딩 오류:", err);
-    });
+    }
+  }
 
 </script>
 
