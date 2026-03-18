@@ -18,18 +18,16 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 📍 성사고등학교 중심
+  // 📍 성사고등학교 중심 (WGS84)
   var map = L.map('map').setView([37.659, 126.836], 15);
 
-  // ✅ VWorld 안정 타일 (키 필요 없음)
+  // 🗺️ VWorld 배경지도
   var vworld = L.tileLayer(
     'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
-    {
-      maxZoom: 19
-    }
+    { maxZoom: 19 }
   ).addTo(map);
 
-  // 📦 레이어 변수
+  // 📦 GeoJSON 레이어 변수
   var safehouseLayer;
 
   // 📦 GeoJSON 불러오기
@@ -37,35 +35,24 @@
     .then(res => res.json())
     .then(data => {
 
-      // 🔥 좌표 변환 함수 (EPSG:3857 → WGS84)
-      function toWGS84(x, y) {
-        var lon = (x / 20037508.34) * 180;
-        var lat = (y / 20037508.34) * 180;
-        lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
-        return [lat, lon];
-      }
+      // ✅ WGS84 그대로 사용 (변환 없음)
+      safehouseLayer = L.geoJSON(data, {
 
-      safehouseLayer = L.layerGroup();
+        pointToLayer: function (feature, latlng) {
+          return L.marker(latlng);
+        },
 
-      data.features.forEach(function(feature) {
+        onEachFeature: function (feature, layer) {
+          layer.bindPopup(
+            "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
+            (feature.properties.adres || "") + "<br>" +
+            (feature.properties.telno || "")
+          );
+        }
 
-        var coords = feature.geometry.coordinates;
-        var converted = toWGS84(coords[0], coords[1]);
+      }).addTo(map);
 
-        var marker = L.marker(converted);
-
-        marker.bindPopup(
-          "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
-          (feature.properties.adres || "") + "<br>" +
-          (feature.properties.telno || "")
-        );
-
-        safehouseLayer.addLayer(marker);
-      });
-
-      safehouseLayer.addTo(map);
-
-      // ✅ 레이어 ON/OFF
+      // ✅ 레이어 ON/OFF (여기 위치 중요)
       L.control.layers(null, {
         "아동안전지킴이집": safehouseLayer
       }, { collapsed: false }).addTo(map);
