@@ -21,15 +21,15 @@
   // 📍 성사고등학교 중심
   var map = L.map('map').setView([37.659, 126.836], 15);
 
-  // 🗺️ VWorld 배경지도
+  // ✅ VWorld 안정 타일 (키 필요 없음)
   var vworld = L.tileLayer(
-    'https://api.vworld.kr/req/wmts/1.0.0/YOUR_VWORLD_KEY/Base/{z}/{y}/{x}.png',
+    'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
     {
       maxZoom: 19
     }
   ).addTo(map);
 
-  // 📦 GeoJSON 레이어 변수 (중요)
+  // 📦 레이어 변수
   var safehouseLayer;
 
   // 📦 GeoJSON 불러오기
@@ -37,35 +37,44 @@
     .then(res => res.json())
     .then(data => {
 
-      safehouseLayer = L.geoJSON(data, {
+      // 🔥 좌표 변환 함수 (EPSG:3857 → WGS84)
+      function toWGS84(x, y) {
+        var lon = (x / 20037508.34) * 180;
+        var lat = (y / 20037508.34) * 180;
+        lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
+        return [lat, lon];
+      }
 
-        // 🔥 포인트를 "마커"로 변환
-        pointToLayer: function (feature, latlng) {
-          return L.marker(latlng);
-        },
+      safehouseLayer = L.layerGroup();
 
-        // 팝업
-        onEachFeature: function (feature, layer) {
-          layer.bindPopup(
-            "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
-            (feature.properties.adres || "") + "<br>" +
-            (feature.properties.telno || "")
-          );
-        }
+      data.features.forEach(function(feature) {
 
+        var coords = feature.geometry.coordinates;
+        var converted = toWGS84(coords[0], coords[1]);
+
+        var marker = L.marker(converted);
+
+        marker.bindPopup(
+          "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
+          (feature.properties.adres || "") + "<br>" +
+          (feature.properties.telno || "")
+        );
+
+        safehouseLayer.addLayer(marker);
       });
 
-      // 👉 기본으로 켜기
       safehouseLayer.addTo(map);
 
-      // 👉 레이어 컨트롤 추가
-      var overlayMaps = {
+      // ✅ 레이어 ON/OFF
+      L.control.layers(null, {
         "아동안전지킴이집": safehouseLayer
-      };
+      }, { collapsed: false }).addTo(map);
 
-      L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
-
+    })
+    .catch(err => {
+      console.error("GeoJSON 로딩 오류:", err);
     });
+
 </script>
 
 </body>
