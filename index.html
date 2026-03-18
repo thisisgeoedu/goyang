@@ -19,23 +19,32 @@
 
 <script>
   // 📍 성사고등학교 중심
-  var map = L.map('map').setView([37.659, 126.836], 16);
+  var map = L.map('map').setView([37.659, 126.836], 15);
 
   // 🗺️ VWorld 배경지도
-  L.tileLayer(
-    'https://api.vworld.kr/req/wmts/1.0.0/AA286675-6915-3AAB-AC92-D5BCB53906D4/Base/{z}/{y}/{x}.png',
+  var vworld = L.tileLayer(
+    'https://api.vworld.kr/req/wmts/1.0.0/YOUR_VWORLD_KEY/Base/{z}/{y}/{x}.png',
     {
       maxZoom: 19
     }
   ).addTo(map);
+
+  // 📦 GeoJSON 레이어 변수 (중요)
+  var safehouseLayer;
 
   // 📦 GeoJSON 불러오기
   fetch('safehouse.geojson')
     .then(res => res.json())
     .then(data => {
 
-      L.geoJSON(data, {
+      safehouseLayer = L.geoJSON(data, {
 
+        // 🔥 포인트를 "마커"로 변환
+        pointToLayer: function (feature, latlng) {
+          return L.marker(latlng);
+        },
+
+        // 팝업
         onEachFeature: function (feature, layer) {
           layer.bindPopup(
             "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
@@ -44,7 +53,17 @@
           );
         }
 
-      }).addTo(map);
+      });
+
+      // 👉 기본으로 켜기
+      safehouseLayer.addTo(map);
+
+      // 👉 레이어 컨트롤 추가
+      var overlayMaps = {
+        "아동안전지킴이집": safehouseLayer
+      };
+
+      L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
 
     });
 </script>
