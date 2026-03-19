@@ -47,7 +47,7 @@
 
       infantLayer = L.geoJSON(data, {
         style: function(feature) {
-          var val = feature.properties.val || 0;
+          var val = Number(feature.properties.val) || 0;
 
           return {
             fillColor: getColor(val),
