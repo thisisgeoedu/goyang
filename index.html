@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>아동안전지킴이집 지도</title>
+  <title>고양 연습</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -10,7 +10,6 @@
     body { margin: 0; }
     #map { height: 100vh; }
 
-    /* 🔥 범례 스타일 */
     .info.legend {
       background: white;
       padding: 10px;
@@ -37,19 +36,18 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  // 📍 성사고등학교 중심
   var map = L.map('map').setView([37.659, 126.836], 15);
 
-  // 🗺️ VWorld 배경지도
   L.tileLayer(
     'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
     { maxZoom: 19 }
   ).addTo(map);
 
-  var safehouseLayer, guLayer, infantLayer;
+  var safehouseLayer, guLayer;
+  var infantLayer, highFLayer, highMLayer, seniorLayer;
 
   // -------------------------
-  // 🔥 색상 함수 (공통)
+  // 색상 함수
   // -------------------------
   function getColor(val) {
     return val >= 100 ? '#800026' :
@@ -60,17 +58,26 @@
                         '#FFFFFF';
   }
 
+  function populationStyle(feature) {
+    var val = Number(feature.properties.val) || 0;
+
+    return {
+      fillColor: getColor(val),
+      fillOpacity: val === 0 ? 0 : 0.5,
+      stroke: false
+    };
+  }
+
   // -------------------------
-  // 🔥 범례 생성 (하지만 기본은 안 띄움)
+  // 범례
   // -------------------------
   var legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function () {
     var div = L.DomUtil.create('div', 'info legend');
-
     var grades = [0, 25, 50, 75, 100];
 
-    div.innerHTML += '<b>유아 인구 (명)</b><br>';
+    div.innerHTML += '<b>인구 (명)</b><br>';
 
     for (var i = 0; i < grades.length; i++) {
       var from = grades[i];
@@ -85,101 +92,70 @@
   };
 
   // -------------------------
-  // 1️⃣ 유아 인구 (맨 아래)
+  // GeoJSON 로딩
   // -------------------------
-  fetch('infant.geojson')
-    .then(res => res.json())
-    .then(data => {
+  Promise.all([
+    fetch('infant.geojson').then(r => r.json()),
+    fetch('high_f.geojson').then(r => r.json()),
+    fetch('high_m.geojson').then(r => r.json()),
+    fetch('senior.geojson').then(r => r.json()),
+    fetch('gu.geojson').then(r => r.json()),
+    fetch('safehouse.geojson').then(r => r.json())
+  ]).then(([infantData, highFData, highMData, seniorData, guData, safehouseData]) => {
 
-      infantLayer = L.geoJSON(data, {
-        style: function(feature) {
+    // 인구 레이어들 (❌ addTo(map) 안함)
+    infantLayer = L.geoJSON(infantData, { style: populationStyle });
+    highFLayer = L.geoJSON(highFData, { style: populationStyle });
+    highMLayer = L.geoJSON(highMData, { style: populationStyle });
+    seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
 
-          // 🔥 핵심: 문자열 → 숫자 변환
-          var val = Number(feature.properties.val) || 0;
-
-          return {
-            fillColor: getColor(val),
-            fillOpacity: val === 0 ? 0 : 0.5,
-            stroke: false
-          };
-        }
-      }).addTo(map);
-
-      checkReady();
+    // 행정구
+    guLayer = L.geoJSON(guData, {
+      style: {
+        color: "#000",
+        weight: 3,
+        dashArray: "6,6",
+        fillOpacity: 0
+      }
     });
 
-  // -------------------------
-  // 2️⃣ 구 경계
-  // -------------------------
-  fetch('gu.geojson')
-    .then(res => res.json())
-    .then(data => {
-
-      guLayer = L.geoJSON(data, {
-        style: function() {
-          return {
-            color: "#000000",
-            weight: 3,
-            dashArray: "6,6",
-            fillOpacity: 0
-          };
-        }
-      }).addTo(map);
-
-      checkReady();
+    // 지킴이집
+    safehouseLayer = L.geoJSON(safehouseData, {
+      pointToLayer: (f, latlng) => L.marker(latlng),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
+          (feature.properties.adres || "") + "<br>" +
+          (feature.properties.telno || "")
+        );
+      }
     });
 
-  // -------------------------
-  // 3️⃣ 아동안전지킴이집 (맨 위)
-  // -------------------------
-  fetch('safehouse.geojson')
-    .then(res => res.json())
-    .then(data => {
+    // -------------------------
+    // 🔥 핵심: baseLayers (하나만 선택)
+    // -------------------------
+    var baseLayers = {
+      "유아 인구": infantLayer,
+      "여고생 인구": highFLayer,
+      "남고생 인구": highMLayer,
+      "노년 인구": seniorLayer
+    };
 
-      safehouseLayer = L.geoJSON(data, {
-        pointToLayer: function (feature, latlng) {
-          return L.marker(latlng);
-        },
-        onEachFeature: function (feature, layer) {
-          layer.bindPopup(
-            "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
-            (feature.properties.adres || "") + "<br>" +
-            (feature.properties.telno || "")
-          );
-        }
-      }).addTo(map);
+    var overlays = {
+      "행정구 경계": guLayer,
+      "아동안전지킴이집": safehouseLayer
+    };
 
-      checkReady();
-    });
-
-  // -------------------------
-  // 레이어 컨트롤
-  // -------------------------
-  function checkReady() {
-    if (safehouseLayer && guLayer && infantLayer) {
-
-      L.control.layers(null, {
-        "유아 인구": infantLayer,
-        "행정구 경계": guLayer,
-        "아동안전지킴이집": safehouseLayer
-      }, { collapsed: false }).addTo(map);
-
-    }
-  }
-
-  // -------------------------
-  // 🔥 범례 ON/OFF (핵심 기능)
-  // -------------------------
-  map.on('overlayadd', function(e) {
-    if (e.name === "유아 인구") {
-      legend.addTo(map);
-    }
+    L.control.layers(baseLayers, overlays, {
+      collapsed: false
+    }).addTo(map);
   });
 
-  map.on('overlayremove', function(e) {
-    if (e.name === "유아 인구") {
-      map.removeControl(legend);
-    }
+  // -------------------------
+  // 🔥 범례 제어 (baseLayer 기준)
+  // -------------------------
+  map.on('baselayerchange', function(e) {
+    legend.addTo(map);
   });
 
 </script>
