@@ -43,7 +43,8 @@
     { maxZoom: 19 }
   ).addTo(map);
 
-  var safehouseLayer, guLayer;
+  var guLayer;
+  var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
   var infantLayer, highFLayer, highMLayer, seniorLayer;
 
   // -------------------------
@@ -95,13 +96,17 @@
   // GeoJSON 로딩
   // -------------------------
   Promise.all([
-    fetch('infant.geojson').then(r => r.json()),
-    fetch('high_f.geojson').then(r => r.json()),
-    fetch('high_m.geojson').then(r => r.json()),
-    fetch('senior.geojson').then(r => r.json()),
-    fetch('gu.geojson').then(r => r.json()),
-    fetch('safehouse.geojson').then(r => r.json())
-  ]).then(([infantData, highFData, highMData, seniorData, guData, safehouseData]) => {
+  fetch('gu.geojson').then(r => r.json()),
+  fetch('infant.geojson').then(r => r.json()),
+  fetch('high_f.geojson').then(r => r.json()),
+  fetch('high_m.geojson').then(r => r.json()),
+  fetch('senior.geojson').then(r => r.json()),
+  fetch('safehouse.geojson').then(r => r.json()),
+  fetch('cool.geojson').then(r => r.json()), 
+  fetch('subway.geojson').then(r => r.json()),
+  fetch('olive.geojson').then(r => r.json())
+])
+.then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
 
     // 인구 레이어들 (❌ addTo(map) 안함)
     infantLayer = L.geoJSON(infantData, { style: populationStyle });
@@ -131,6 +136,46 @@
       }
     });
 
+  // -------------------------
+// 무더위쉼터
+// -------------------------
+coolLayer = L.geoJSON(coolData, {
+  pointToLayer: (f, latlng) => L.marker(latlng),
+  onEachFeature: (feature, layer) => {
+    layer.bindPopup(
+      "<b>무더위쉼터</b><br>" +
+      (feature.properties.name || "")
+    );
+  }
+});
+
+// -------------------------
+// 도시철도
+// -------------------------
+subwayLayer = L.geoJSON(subwayData, {
+  pointToLayer: (f, latlng) => L.marker(latlng),
+  onEachFeature: (feature, layer) => {
+    layer.bindPopup(
+      "<b>도시철도</b><br>" +
+      (feature.properties.name || "")
+    );
+  }
+});
+
+// -------------------------
+// 올리브영
+// -------------------------
+oliveLayer = L.geoJSON(oliveData, {
+  pointToLayer: (f, latlng) => L.marker(latlng),
+  onEachFeature: (feature, layer) => {
+    layer.bindPopup(
+      "<b>올리브영</b><br>" +
+      (feature.properties.name || "")
+    );
+  }
+});
+
+  
     // -------------------------
     // 🔥 핵심: baseLayers (하나만 선택)
     // -------------------------
@@ -143,7 +188,10 @@
 
     var overlays = {
       "행정구 경계": guLayer,
-      "아동안전지킴이집": safehouseLayer
+      "아동안전지킴이집": safehouseLayer,
+      "무더위쉼터": coolLayer,
+      "도시철도": subwayLayer,
+      "올리브영": oliveLayer 
     };
 
     L.control.layers(baseLayers, overlays, {
