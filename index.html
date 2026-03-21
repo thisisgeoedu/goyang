@@ -10,12 +10,12 @@
     body { margin: 0; }
     #map { height: 100vh; }
 
-    /* 🔥 레이어 패널 (좌상단 + 줌 버튼 안 겹치게) */
+    /* 레이어 패널 (좌상단 + 줌 버튼 아래) */
     .leaflet-top.leaflet-left .leaflet-control-layers {
       margin-top: 60px;
     }
 
-    /* 🔥 버퍼 UI (우상단, 기존 방식 유지) */
+    /* 버퍼 UI */
     #bufferUI {
       position: absolute;
       top: 10px;
@@ -29,7 +29,7 @@
       width: 180px;
     }
 
-    /* 🔥 범례 */
+    /* 범례 */
     .info.legend {
       background: white;
       padding: 10px;
@@ -53,26 +53,24 @@
 
 <div id="map"></div>
 
-<!-- 🔥 버퍼 패널 -->
+<!-- 🔥 버퍼 UI -->
 <div id="bufferUI">
   <b>버퍼 분석</b><br><br>
 
-  <label>레이어 선택</label><br>
-  <select id="bufferLayer">
-    <option value="safehouse">아동안전지킴이집</option>
-    <option value="cool">무더위쉼터</option>
-    <option value="subway">도시철도</option>
-    <option value="olive">올리브영</option>
-  </select>
+  <label><input type="radio" name="bufferTarget" value="safehouse"> 아동안전지킴이집</label><br>
+  <label><input type="radio" name="bufferTarget" value="cool"> 무더위쉼터</label><br>
+  <label><input type="radio" name="bufferTarget" value="subway"> 도시철도</label><br>
+  <label><input type="radio" name="bufferTarget" value="olive"> 올리브영</label>
 
   <br><br>
 
-  <label>거리 (m)</label><br>
-  <input type="number" id="bufferDist" value="100" style="width: 100%;">
+  거리(m)<br>
+  <input type="number" id="bufferDistance" value="100" style="width:100%">
 
   <br><br>
 
-  <button id="bufferBtn" style="width:100%">버퍼 실행</button>
+  <button onclick="updateBuffer()" style="width:100%">버퍼 실행</button>
+  <button onclick="clearBuffer()" style="width:100%; margin-top:5px;">초기화</button>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -85,13 +83,14 @@
     { maxZoom: 19 }
   ).addTo(map);
 
+  // 🔥 버퍼 레이어 (핵심)
+  var bufferLayer = L.layerGroup().addTo(map);
+
   var guLayer;
   var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
   var infantLayer, highFLayer, highMLayer, seniorLayer;
 
-  // -------------------------
   // 색상 함수
-  // -------------------------
   function getColor(val) {
     return val >= 100 ? '#800026' :
            val >= 75  ? '#BD0026' :
@@ -111,9 +110,7 @@
     };
   }
 
-  // -------------------------
-  // 🔥 공통 팝업 함수
-  // -------------------------
+  // 🔥 공통 팝업
   function bindSimplePopup(feature, layer) {
     let html = "";
     for (let key in feature.properties) {
@@ -122,9 +119,7 @@
     layer.bindPopup(html);
   }
 
-  // -------------------------
   // 범례
-  // -------------------------
   var legend = L.control({ position: 'bottomright' });
 
   legend.onAdd = function () {
@@ -146,6 +141,46 @@
   };
 
   // -------------------------
+  // 🔥 버퍼 기능 (네 코드 그대로)
+  // -------------------------
+  function getSelectedLayer() {
+    const selected = document.querySelector('input[name="bufferTarget"]:checked');
+    if (!selected) return null;
+
+    if (selected.value === "safehouse") return safehouseLayer;
+    if (selected.value === "cool") return coolLayer;
+    if (selected.value === "subway") return subwayLayer;
+    if (selected.value === "olive") return oliveLayer;
+  }
+
+  function updateBuffer() {
+    const layer = getSelectedLayer();
+    const distance = Number(document.getElementById("bufferDistance").value);
+
+    if (!layer) {
+      alert("대상을 선택하세요");
+      return;
+    }
+
+    bufferLayer.clearLayers();
+
+    layer.eachLayer(function(l) {
+      if (l.getLatLng) {
+        L.circle(l.getLatLng(), {
+          radius: distance,
+          stroke: false,
+          fillColor: '#3388ff',
+          fillOpacity: 0.15
+        }).addTo(bufferLayer);
+      }
+    });
+  }
+
+  function clearBuffer() {
+    bufferLayer.clearLayers();
+  }
+
+  // -------------------------
   // GeoJSON 로딩
   // -------------------------
   Promise.all([
@@ -161,13 +196,11 @@
   ])
   .then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
 
-    // 인구
     infantLayer = L.geoJSON(infantData, { style: populationStyle });
     highFLayer = L.geoJSON(highFData, { style: populationStyle });
     highMLayer = L.geoJSON(highMData, { style: populationStyle });
     seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
 
-    // 행정구
     guLayer = L.geoJSON(guData, {
       style: {
         color: "#000",
@@ -177,7 +210,6 @@
       }
     }).addTo(map);
 
-    // 시설 (🔥 전부 팝업 적용)
     safehouseLayer = L.geoJSON(safehouseData, {
       pointToLayer: (f, latlng) => L.marker(latlng),
       onEachFeature: bindSimplePopup
@@ -198,7 +230,6 @@
       onEachFeature: bindSimplePopup
     });
 
-    // 레이어 컨트롤
     var baseLayers = {
       "유아 인구": infantLayer,
       "여고생 인구": highFLayer,
@@ -220,7 +251,6 @@
     }).addTo(map);
   });
 
-  // 범례 표시
   map.on('baselayerchange', function() {
     legend.addTo(map);
   });
