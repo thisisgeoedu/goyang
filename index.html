@@ -10,7 +10,12 @@
     body { margin: 0; }
     #map { height: 100vh; }
 
-    /* 인구 제목 */
+    /* 🔥 레이어 패널 위치 여백 (줌 버튼과 안 겹치게) */
+    .leaflet-top.leaflet-left .leaflet-control-layers {
+      margin-top: 60px;
+    }
+
+    /* 🔥 인구 제목 */
     .leaflet-control-layers-base::before {
       content: "인구";
       display: block;
@@ -18,7 +23,7 @@
       margin-bottom: 4px;
     }
 
-    /* 좌측 패널 구분 */
+    /* 🔥 overlays 그룹 제목 */
     .leaflet-control-layers-overlays::before {
       content: "행정구역 및 시설";
       display: block;
@@ -26,6 +31,7 @@
       margin: 6px 0;
     }
 
+    /* 🔥 시설 구분선 */
     .leaflet-control-layers-overlays label:nth-child(2)::before {
       content: "";
       display: block;
@@ -33,20 +39,7 @@
       margin: 6px 0;
     }
 
-    /* 🔥 우측 버퍼 UI */
-    #bufferUI {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      font-size: 13px;
-      width: 180px;
-    }
-
+    /* 🔥 범례 */
     .info.legend {
       background: white;
       padding: 10px;
@@ -56,34 +49,27 @@
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
       border-radius: 5px;
     }
+
+    .info.legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+
   </style>
 </head>
-
 <body>
 
 <div id="map"></div>
 
-<!-- 🔥 버퍼 UI -->
-<div id="bufferUI">
-  <b>버퍼 분석</b><br><br>
-
-  대상:<br>
-  <label><input type="radio" name="bufferTarget" value="safehouse"> 지킴이집</label><br>
-  <label><input type="radio" name="bufferTarget" value="cool"> 무더위쉼터</label><br>
-  <label><input type="radio" name="bufferTarget" value="subway"> 도시철도</label><br>
-  <label><input type="radio" name="bufferTarget" value="olive"> 올리브영</label><br><br>
-
-  거리(m):<br>
-  <input type="number" id="bufferDistance" value="200"><br><br>
-
-  <button onclick="updateBuffer()">생성</button>
-  <button onclick="clearBuffer()">초기화</button>
-</div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  var map = L.map('map').setView([37.659, 126.836], 15);
+  var map = L.map('map', {
+    zoomControl: true
+  }).setView([37.659, 126.836], 15);
 
   L.tileLayer(
     'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
@@ -94,8 +80,9 @@
   var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
   var infantLayer, highFLayer, highMLayer, seniorLayer;
 
-  var bufferLayer = L.layerGroup().addTo(map); // 🔥 버퍼 레이어
-
+  // -------------------------
+  // 색상 함수
+  // -------------------------
   function getColor(val) {
     return val >= 100 ? '#800026' :
            val >= 75  ? '#BD0026' :
@@ -116,7 +103,30 @@
   }
 
   // -------------------------
-  // 데이터 로딩
+  // 범례
+  // -------------------------
+  var legend = L.control({ position: 'bottomright' });
+
+  legend.onAdd = function () {
+    var div = L.DomUtil.create('div', 'info legend');
+    var grades = [0, 25, 50, 75, 100];
+
+    div.innerHTML += '<b>인구 (명)</b><br>';
+
+    for (var i = 0; i < grades.length; i++) {
+      var from = grades[i];
+      var to = grades[i + 1];
+
+      div.innerHTML +=
+        '<i style="background:' + getColor(from + 1) + '"></i> ' +
+        from + (to ? '&ndash;' + to : '+') + '<br>';
+    }
+
+    return div;
+  };
+
+  // -------------------------
+  // GeoJSON 로딩
   // -------------------------
   Promise.all([
     fetch('gu.geojson').then(r => r.json()),
@@ -125,17 +135,19 @@
     fetch('high_m.geojson').then(r => r.json()),
     fetch('senior.geojson').then(r => r.json()),
     fetch('safehouse.geojson').then(r => r.json()),
-    fetch('cool.geojson').then(r => r.json()),
+    fetch('cool.geojson').then(r => r.json()), 
     fetch('subway.geojson').then(r => r.json()),
     fetch('olive.geojson').then(r => r.json())
   ])
   .then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
 
+    // 인구
     infantLayer = L.geoJSON(infantData, { style: populationStyle });
     highFLayer = L.geoJSON(highFData, { style: populationStyle });
     highMLayer = L.geoJSON(highMData, { style: populationStyle });
     seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
 
+    // 행정구
     guLayer = L.geoJSON(guData, {
       style: {
         color: "#000",
@@ -145,8 +157,16 @@
       }
     }).addTo(map);
 
+    // 시설
     safehouseLayer = L.geoJSON(safehouseData, {
-      pointToLayer: (f, latlng) => L.marker(latlng)
+      pointToLayer: (f, latlng) => L.marker(latlng),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          "<b>" + (feature.properties.fclty_nm || "") + "</b><br>" +
+          (feature.properties.adres || "") + "<br>" +
+          (feature.properties.telno || "")
+        );
+      }
     });
 
     coolLayer = L.geoJSON(coolData, {
@@ -161,6 +181,9 @@
       pointToLayer: (f, latlng) => L.marker(latlng)
     });
 
+    // -------------------------
+    // 레이어 컨트롤 (좌상단 배치)
+    // -------------------------
     var baseLayers = {
       "유아 인구": infantLayer,
       "여고생 인구": highFLayer,
@@ -177,50 +200,17 @@
     };
 
     L.control.layers(baseLayers, overlays, {
-      collapsed: false
+      collapsed: false,
+      position: 'topleft' // 🔥 핵심
     }).addTo(map);
   });
 
   // -------------------------
-  // 🔥 버퍼 기능
+  // 범례 표시
   // -------------------------
-
-  function getSelectedLayer() {
-    const selected = document.querySelector('input[name="bufferTarget"]:checked');
-    if (!selected) return null;
-
-    if (selected.value === "safehouse") return safehouseLayer;
-    if (selected.value === "cool") return coolLayer;
-    if (selected.value === "subway") return subwayLayer;
-    if (selected.value === "olive") return oliveLayer;
-  }
-
-  function updateBuffer() {
-    const layer = getSelectedLayer();
-    const distance = Number(document.getElementById("bufferDistance").value);
-
-    if (!layer) {
-      alert("대상을 선택하세요");
-      return;
-    }
-
-    bufferLayer.clearLayers();
-
-    layer.eachLayer(function(l) {
-      if (l.getLatLng) {
-        L.circle(l.getLatLng(), {
-          radius: distance,
-          stroke: false,
-          fillColor: '#3388ff',
-          fillOpacity: 0.15
-        }).addTo(bufferLayer);
-      }
-    });
-  }
-
-  function clearBuffer() {
-    bufferLayer.clearLayers();
-  }
+  map.on('baselayerchange', function() {
+    legend.addTo(map);
+  });
 
 </script>
 
