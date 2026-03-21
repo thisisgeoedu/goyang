@@ -141,8 +141,6 @@
   };
 
   // -------------------------
-  // 🔥 버퍼 기능 (네 코드 그대로)
-  // -------------------------
   function getSelectedLayer() {
     const selected = document.querySelector('input[name="bufferTarget"]:checked');
     if (!selected) return null;
@@ -152,29 +150,43 @@
     if (selected.value === "subway") return subwayLayer;
     if (selected.value === "olive") return oliveLayer;
   }
+function updateBuffer() {
+  const layer = getSelectedLayer();
+  const distance = Number(document.getElementById("bufferDistance").value);
 
-  function updateBuffer() {
-    const layer = getSelectedLayer();
-    const distance = Number(document.getElementById("bufferDistance").value);
+  if (!layer) {
+    alert("대상을 선택하세요");
+    return;
+  }
 
-    if (!layer) {
-      alert("대상을 선택하세요");
-      return;
+  bufferLayer.clearLayers();
+
+  layer.eachLayer(function(l) {
+
+    // ✅ 1. 마커(포인트)
+    if (l.getLatLng) {
+      L.circle(l.getLatLng(), {
+        radius: distance,
+        stroke: false,
+        fillColor: '#3388ff',
+        fillOpacity: 0.15
+      }).addTo(bufferLayer);
     }
 
-    bufferLayer.clearLayers();
+    // ✅ 2. 폴리곤/라인 → 중심점 사용
+    else if (l.getBounds) {
+      const center = l.getBounds().getCenter();
 
-    layer.eachLayer(function(l) {
-      if (l.getLatLng) {
-        L.circle(l.getLatLng(), {
-          radius: distance,
-          stroke: false,
-          fillColor: '#3388ff',
-          fillOpacity: 0.15
-        }).addTo(bufferLayer);
-      }
-    });
-  }
+      L.circle(center, {
+        radius: distance,
+        stroke: false,
+        fillColor: '#3388ff',
+        fillOpacity: 0.15
+      }).addTo(bufferLayer);
+    }
+
+  });
+}
 
   function clearBuffer() {
     bufferLayer.clearLayers();
