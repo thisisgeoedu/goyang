@@ -177,19 +177,16 @@ oliveLayer = L.geoJSON(oliveData, {
 
   
     var baseLayers = {
-  "<b>인구</b>": L.layerGroup(),
-  "유아 인구": infantLayer,
+  "<b>인구</b><br>유아 인구": infantLayer,
   "여고생 인구": highFLayer,
   "남고생 인구": highMLayer,
   "노년 인구": seniorLayer
 };
 
 var overlays = {
-  "<hr style='margin:6px 0'><b>행정구역</b>": L.layerGroup(),
-  "행정구 경계": guLayer,
+  "<hr style='margin:6px 0'><b>행정구역</b><br>행정구 경계": guLayer,
 
-  "<hr style='margin:6px 0'><b>시설</b>": L.layerGroup(),
-  "아동안전지킴이집": safehouseLayer,
+  "<hr style='margin:6px 0'><b>시설</b><br>아동안전지킴이집": safehouseLayer,
   "무더위쉼터": coolLayer,
   "도시철도": subwayLayer,
   "올리브영": oliveLayer
