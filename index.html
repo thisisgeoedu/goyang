@@ -73,27 +73,83 @@
 </div>
 <div id="map"></div>
 
-  <!-- 🔥 시작 안내 오버레이 -->
-<div id="introOverlay">
-  <div id="introBox">
+  /* 🔥 전체 어두운 배경 */
+#introOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+}
 
-    <div class="intro-title">
-      '공간 정의' : 공간적 측면에서 사회적으로 가치 있는 자원과 그 자원으로의 접근성이 공정하게 분배되었는가
-    </div>
+/* 🔥 중앙 팝업 박스 (핵심) */
+#introBox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 
-    <div class="intro-desc">
-      우리 삶에 영향을 미치는 편의⋅안전⋅기피 시설의 지역 격차 등 공간 불평등 사례를 파악하기
-    </div>
+  background: white;
+  padding: 35px 30px;
+  border-radius: 12px;
+  width: 440px;
+  text-align: center;
 
-    <div class="intro-example">
-      ex) 유아 인구는 많지만 아동안전지킴이집이 가까운 곳에 없는 동네는?
-    </div>
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  animation: fadeIn 0.3s ease;
+}
 
-    <button onclick="closeIntro()">확인</button>
+/* 🔥 타이틀 (학습목표) */
+.intro-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
 
-  </div>
-</div>
+/* 🔥 설명 */
+.intro-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
 
+/* 🔥 예시 */
+.intro-example {
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 25px;
+}
+
+/* 🔥 버튼 */
+#introBox button {
+  padding: 10px 24px;
+  font-size: 14px;
+  border: none;
+  border-radius: 6px;
+  background: #3388ff;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#introBox button:hover {
+  background: #2a6fd6;
+}
+
+/* 🔥 살짝 등장 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
   
 <!-- 🔥 버퍼 UI -->
 <div id="bufferUI">
