@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>고양 연습</title>
+  <title>공간 정의 지도</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -10,7 +10,7 @@
     body { margin: 0; }
     #map { height: 100vh; }
 
-    /* 레이어 패널 (좌상단 + 줌 버튼 아래) */
+    /* 레이어 패널 위치 */
     .leaflet-top.leaflet-left .leaflet-control-layers {
       margin-top: 60px;
     }
@@ -29,128 +29,71 @@
       width: 180px;
     }
 
-    /* 범례 */
-    .info.legend {
-      background: white;
-      padding: 10px;
-      font-size: 12px;
-      line-height: 18px;
-      color: #333;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      border-radius: 5px;
+    /* 🔥 안내 오버레이 */
+    #introOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 2000;
     }
 
-    .info.legend i {
-      width: 18px;
-      height: 18px;
-      float: left;
-      margin-right: 8px;
-      opacity: 0.7;
+    #introBox {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+
+      background: white;
+      padding: 35px 30px;
+      border-radius: 12px;
+      width: 440px;
+      text-align: center;
+
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      animation: fadeIn 0.3s ease;
+    }
+
+    .intro-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .intro-desc {
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .intro-example {
+      font-size: 12px;
+      color: #777;
+      margin-bottom: 25px;
+    }
+
+    #introBox button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      background: #3388ff;
+      color: white;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
     }
   </style>
 </head>
+
 <body>
-  
-<!-- 🔥 시작 안내 오버레이 -->
-<div id="introOverlay">
-  <div id="introBox">
 
-    <div class="intro-title">
-      '공간 정의' : 공간적 측면에서 사회적으로 가치 있는 자원과 그 자원으로의 접근성이 공정하게 분배되었는가
-    </div>
-
-    <div class="intro-desc">
-      우리 삶에 영향을 미치는 편의⋅안전⋅기피 시설의 지역 격차 등 공간 불평등 사례를 파악하기
-    </div>
-
-    <div class="intro-example">
-      ex) 유아 인구는 많지만 아동안전지킴이집이 가까운 곳에 없는 동네는?
-    </div>
-
-    <button onclick="closeIntro()">확인</button>
-
-  </div>
-</div>
 <div id="map"></div>
 
-  /* 🔥 전체 어두운 배경 */
-#introOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  z-index: 2000;
-}
-
-/* 🔥 중앙 팝업 박스 (핵심) */
-#introBox {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  background: white;
-  padding: 35px 30px;
-  border-radius: 12px;
-  width: 440px;
-  text-align: center;
-
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  animation: fadeIn 0.3s ease;
-}
-
-/* 🔥 타이틀 (학습목표) */
-.intro-title {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.5;
-  margin-bottom: 20px;
-}
-
-/* 🔥 설명 */
-.intro-desc {
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 15px;
-}
-
-/* 🔥 예시 */
-.intro-example {
-  font-size: 12px;
-  color: #777;
-  margin-bottom: 25px;
-}
-
-/* 🔥 버튼 */
-#introBox button {
-  padding: 10px 24px;
-  font-size: 14px;
-  border: none;
-  border-radius: 6px;
-  background: #3388ff;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#introBox button:hover {
-  background: #2a6fd6;
-}
-
-/* 🔥 살짝 등장 애니메이션 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -60%);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%);
-  }
-}
-  
 <!-- 🔥 버퍼 UI -->
 <div id="bufferUI">
   <b>버퍼 분석</b><br><br>
@@ -171,6 +114,27 @@
   <button onclick="clearBuffer()" style="width:100%; margin-top:5px;">초기화</button>
 </div>
 
+<!-- 🔥 시작 안내 -->
+<div id="introOverlay">
+  <div id="introBox">
+
+    <div class="intro-title">
+      '공간 정의' : 공간적 측면에서 사회적으로 가치 있는 자원과 그 자원으로의 접근성이 공정하게 분배되었는가
+    </div>
+
+    <div class="intro-desc">
+      우리 삶에 영향을 미치는 편의⋅안전⋅기피 시설의 지역 격차 등 공간 불평등 사례를 파악하기
+    </div>
+
+    <div class="intro-example">
+      ex) 유아 인구는 많지만 아동안전지킴이집이 가까운 곳에 없는 동네는?
+    </div>
+
+    <button onclick="closeIntro()">확인</button>
+
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
@@ -181,34 +145,12 @@
     { maxZoom: 19 }
   ).addTo(map);
 
-  // 🔥 버퍼 레이어 (핵심)
   var bufferLayer = L.layerGroup().addTo(map);
 
   var guLayer;
   var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
   var infantLayer, highFLayer, highMLayer, seniorLayer;
 
-  // 색상 함수
-  function getColor(val) {
-    return val >= 100 ? '#800026' :
-           val >= 75  ? '#BD0026' :
-           val >= 50  ? '#E31A1C' :
-           val >= 25  ? '#FC4E2A' :
-           val > 0    ? '#FD8D3C' :
-                        '#FFFFFF';
-  }
-
-  function populationStyle(feature) {
-    var val = Number(feature.properties.val) || 0;
-
-    return {
-      fillColor: getColor(val),
-      fillOpacity: val === 0 ? 0 : 0.5,
-      stroke: false
-    };
-  }
-
-  // 🔥 공통 팝업
   function bindSimplePopup(feature, layer) {
     let html = "";
     for (let key in feature.properties) {
@@ -217,28 +159,6 @@
     layer.bindPopup(html);
   }
 
-  // 범례
-  var legend = L.control({ position: 'bottomright' });
-
-  legend.onAdd = function () {
-    var div = L.DomUtil.create('div', 'info legend');
-    var grades = [0, 25, 50, 75, 100];
-
-    div.innerHTML += '<b>인구 (명)</b><br>';
-
-    for (var i = 0; i < grades.length; i++) {
-      var from = grades[i];
-      var to = grades[i + 1];
-
-      div.innerHTML +=
-        '<i style="background:' + getColor(from + 1) + '"></i> ' +
-        from + (to ? '&ndash;' + to : '+') + '<br>';
-    }
-
-    return div;
-  };
-
-  // -------------------------
   function getSelectedLayer() {
     const selected = document.querySelector('input[name="bufferTarget"]:checked');
     if (!selected) return null;
@@ -248,77 +168,56 @@
     if (selected.value === "subway") return subwayLayer;
     if (selected.value === "olive") return oliveLayer;
   }
-function updateBuffer() {
-  const layer = getSelectedLayer();
-  const distance = Number(document.getElementById("bufferDistance").value);
 
-  if (!layer) {
-    alert("대상을 선택하세요");
-    return;
+  function updateBuffer() {
+    const layer = getSelectedLayer();
+    const distance = Number(document.getElementById("bufferDistance").value);
+
+    if (!layer) {
+      alert("대상을 선택하세요");
+      return;
+    }
+
+    bufferLayer.clearLayers();
+
+    layer.eachLayer(function(l) {
+      if (l.getLatLng) {
+        L.circle(l.getLatLng(), {
+          radius: distance,
+          fillColor: '#3388ff',
+          fillOpacity: 0.15,
+          stroke: false
+        }).addTo(bufferLayer);
+      } else if (l.getBounds) {
+        const center = l.getBounds().getCenter();
+        L.circle(center, {
+          radius: distance,
+          fillColor: '#3388ff',
+          fillOpacity: 0.15,
+          stroke: false
+        }).addTo(bufferLayer);
+      }
+    });
   }
-
-  bufferLayer.clearLayers();
-
-  layer.eachLayer(function(l) {
-
-    // ✅ 1. 마커(포인트)
-    if (l.getLatLng) {
-      L.circle(l.getLatLng(), {
-        radius: distance,
-        stroke: false,
-        fillColor: '#3388ff',
-        fillOpacity: 0.15
-      }).addTo(bufferLayer);
-    }
-
-    // ✅ 2. 폴리곤/라인 → 중심점 사용
-    else if (l.getBounds) {
-      const center = l.getBounds().getCenter();
-
-      L.circle(center, {
-        radius: distance,
-        stroke: false,
-        fillColor: '#3388ff',
-        fillOpacity: 0.15
-      }).addTo(bufferLayer);
-    }
-
-  });
-}
 
   function clearBuffer() {
     bufferLayer.clearLayers();
   }
 
-  // -------------------------
-  // GeoJSON 로딩
-  // -------------------------
+  function closeIntro() {
+    document.getElementById("introOverlay").style.display = "none";
+  }
+
   Promise.all([
     fetch('gu.geojson').then(r => r.json()),
-    fetch('infant.geojson').then(r => r.json()),
-    fetch('high_f.geojson').then(r => r.json()),
-    fetch('high_m.geojson').then(r => r.json()),
-    fetch('senior.geojson').then(r => r.json()),
     fetch('safehouse.geojson').then(r => r.json()),
-    fetch('cool.geojson').then(r => r.json()), 
+    fetch('cool.geojson').then(r => r.json()),
     fetch('subway.geojson').then(r => r.json()),
     fetch('olive.geojson').then(r => r.json())
   ])
-  .then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
+  .then(([guData, safehouseData, coolData, subwayData, oliveData]) => {
 
-    infantLayer = L.geoJSON(infantData, { style: populationStyle });
-    highFLayer = L.geoJSON(highFData, { style: populationStyle });
-    highMLayer = L.geoJSON(highMData, { style: populationStyle });
-    seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
-
-    guLayer = L.geoJSON(guData, {
-      style: {
-        color: "#000",
-        weight: 3,
-        dashArray: "6,6",
-        fillOpacity: 0
-      }
-    }).addTo(map);
+    guLayer = L.geoJSON(guData).addTo(map);
 
     safehouseLayer = L.geoJSON(safehouseData, {
       pointToLayer: (f, latlng) => L.marker(latlng),
@@ -340,13 +239,6 @@ function updateBuffer() {
       onEachFeature: bindSimplePopup
     });
 
-    var baseLayers = {
-      "유아 인구": infantLayer,
-      "여고생 인구": highFLayer,
-      "남고생 인구": highMLayer,
-      "노년 인구": seniorLayer
-    };
-
     var overlays = {
       "행정구 경계": guLayer,
       "아동안전지킴이집": safehouseLayer,
@@ -355,22 +247,12 @@ function updateBuffer() {
       "올리브영": oliveLayer
     };
 
-    L.control.layers(baseLayers, overlays, {
+    L.control.layers(null, overlays, {
       collapsed: false,
       position: 'topleft'
     }).addTo(map);
   });
 
-  map.on('baselayerchange', function() {
-    legend.addTo(map);
-  });
-
-  
-function closeIntro() {
-  document.getElementById("introOverlay").style.display = "none";
-}
-
-  
 </script>
 
 </body>
