@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>공간 정의 지도</title>
+  <title>고양 연습</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -45,21 +45,17 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-
       background: white;
       padding: 35px 30px;
       border-radius: 12px;
       width: 440px;
       text-align: center;
-
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      animation: fadeIn 0.3s ease;
     }
 
     .intro-title {
       font-size: 20px;
       font-weight: 700;
-      line-height: 1.5;
       margin-bottom: 20px;
     }
 
@@ -83,9 +79,23 @@
       cursor: pointer;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translate(-50%, -60%); }
-      to { opacity: 1; transform: translate(-50%, -50%); }
+    /* 범례 */
+    .info.legend {
+      background: white;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 18px;
+      color: #333;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      border-radius: 5px;
+    }
+
+    .info.legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
     }
   </style>
 </head>
@@ -117,21 +127,16 @@
 <!-- 🔥 시작 안내 -->
 <div id="introOverlay">
   <div id="introBox">
-
     <div class="intro-title">
       '공간 정의' : 공간적 측면에서 사회적으로 가치 있는 자원과 그 자원으로의 접근성이 공정하게 분배되었는가
     </div>
-
     <div class="intro-desc">
       우리 삶에 영향을 미치는 편의⋅안전⋅기피 시설의 지역 격차 등 공간 불평등 사례를 파악하기
     </div>
-
     <div class="intro-example">
       ex) 유아 인구는 많지만 아동안전지킴이집이 가까운 곳에 없는 동네는?
     </div>
-
     <button onclick="closeIntro()">확인</button>
-
   </div>
 </div>
 
@@ -150,6 +155,24 @@
   var guLayer;
   var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
   var infantLayer, highFLayer, highMLayer, seniorLayer;
+
+  function getColor(val) {
+    return val >= 100 ? '#800026' :
+           val >= 75  ? '#BD0026' :
+           val >= 50  ? '#E31A1C' :
+           val >= 25  ? '#FC4E2A' :
+           val > 0    ? '#FD8D3C' :
+                        '#FFFFFF';
+  }
+
+  function populationStyle(feature) {
+    var val = Number(feature.properties.val) || 0;
+    return {
+      fillColor: getColor(val),
+      fillOpacity: val === 0 ? 0 : 0.5,
+      stroke: false
+    };
+  }
 
   function bindSimplePopup(feature, layer) {
     let html = "";
@@ -208,36 +231,69 @@
     document.getElementById("introOverlay").style.display = "none";
   }
 
+  var legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function () {
+    var div = L.DomUtil.create('div', 'info legend');
+    var grades = [0,25,50,75,100];
+    div.innerHTML += '<b>인구 (명)</b><br>';
+    for (var i=0;i<grades.length;i++){
+      var from = grades[i];
+      var to = grades[i+1];
+      div.innerHTML +=
+        '<i style="background:' + getColor(from+1) + '"></i> ' +
+        from + (to ? '&ndash;' + to : '+') + '<br>';
+    }
+    return div;
+  };
+
   Promise.all([
     fetch('gu.geojson').then(r => r.json()),
+    fetch('infant.geojson').then(r => r.json()),
+    fetch('high_f.geojson').then(r => r.json()),
+    fetch('high_m.geojson').then(r => r.json()),
+    fetch('senior.geojson').then(r => r.json()),
     fetch('safehouse.geojson').then(r => r.json()),
     fetch('cool.geojson').then(r => r.json()),
     fetch('subway.geojson').then(r => r.json()),
     fetch('olive.geojson').then(r => r.json())
   ])
-  .then(([guData, safehouseData, coolData, subwayData, oliveData]) => {
+  .then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
 
-    guLayer = L.geoJSON(guData).addTo(map);
+    infantLayer = L.geoJSON(infantData, { style: populationStyle });
+    highFLayer = L.geoJSON(highFData, { style: populationStyle });
+    highMLayer = L.geoJSON(highMData, { style: populationStyle });
+    seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
+
+    guLayer = L.geoJSON(guData, {
+      style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
+    }).addTo(map);
 
     safehouseLayer = L.geoJSON(safehouseData, {
-      pointToLayer: (f, latlng) => L.marker(latlng),
+      pointToLayer:(f,latlng)=>L.marker(latlng),
       onEachFeature: bindSimplePopup
     });
 
     coolLayer = L.geoJSON(coolData, {
-      pointToLayer: (f, latlng) => L.marker(latlng),
+      pointToLayer:(f,latlng)=>L.marker(latlng),
       onEachFeature: bindSimplePopup
     });
 
     subwayLayer = L.geoJSON(subwayData, {
-      pointToLayer: (f, latlng) => L.marker(latlng),
+      pointToLayer:(f,latlng)=>L.marker(latlng),
       onEachFeature: bindSimplePopup
     });
 
     oliveLayer = L.geoJSON(oliveData, {
-      pointToLayer: (f, latlng) => L.marker(latlng),
+      pointToLayer:(f,latlng)=>L.marker(latlng),
       onEachFeature: bindSimplePopup
     });
+
+    var baseLayers = {
+      "유아 인구": infantLayer,
+      "여고생 인구": highFLayer,
+      "남고생 인구": highMLayer,
+      "노년 인구": seniorLayer
+    };
 
     var overlays = {
       "행정구 경계": guLayer,
@@ -247,10 +303,14 @@
       "올리브영": oliveLayer
     };
 
-    L.control.layers(null, overlays, {
-      collapsed: false,
-      position: 'topleft'
+    L.control.layers(baseLayers, overlays, {
+      collapsed:false,
+      position:'topleft'
     }).addTo(map);
+  });
+
+  map.on('baselayerchange', function() {
+    legend.addTo(map);
   });
 
 </script>
