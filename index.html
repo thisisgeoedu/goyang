@@ -281,8 +281,6 @@ Promise.all([
   coolLayer = L.geoJSON(coolData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   subwayLayer = L.geoJSON(subwayData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   oliveLayer = L.geoJSON(oliveData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
-
-  // 🔥 추가
   karaokeLayer = L.geoJSON(karaokeData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   studyLayer = L.geoJSON(studyData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   dustLayer = L.geoJSON(dustData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
@@ -296,6 +294,7 @@ Promise.all([
   };
 
   var overlays = {
+    "행정구 경계": guLayer
     "단란/유흥주점": karaokeLayer,
     "대기오염배출시설": airLayer,
     "도시철도": subwayLayer,
@@ -304,7 +303,6 @@ Promise.all([
     "스터디카페": studyLayer,
     "아동안전지킴이집": safehouseLayer,
     "올리브영": oliveLayer,
-    "행정구 경계": guLayer
   };
 
   L.control.layers(baseLayers, overlays, {
