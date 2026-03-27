@@ -257,12 +257,10 @@ Promise.all([
   fetch('cool.geojson').then(r => r.json()),
   fetch('subway.geojson').then(r => r.json()),
   fetch('olive.geojson').then(r => r.json()),
-
-  // 🔥 추가
-  fetch('karaoke.json').then(r => r.json()),
-  fetch('study.json').then(r => r.json()),
-  fetch('dust.json').then(r => r.json()),
-  fetch('air.json').then(r => r.json())
+  fetch('karaoke.geojson').then(r => r.json()),
+  fetch('study.geojson').then(r => r.json()),
+  fetch('dust.geojson').then(r => r.json()),
+  fetch('air.geojson').then(r => r.json())
 ])
 .then(([guData, infantData, highFData, highMData, seniorData,
         safehouseData, coolData, subwayData, oliveData,
