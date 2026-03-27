@@ -50,22 +50,9 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
 
-    .intro-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-
-    .intro-desc {
-      font-size: 14px;
-      margin-bottom: 15px;
-    }
-
-    .intro-example {
-      font-size: 12px;
-      color: #777;
-      margin-bottom: 25px;
-    }
+    .intro-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .intro-desc { font-size: 14px; margin-bottom: 15px; }
+    .intro-example { font-size: 12px; color: #777; margin-bottom: 25px; }
 
     #introBox button {
       padding: 10px 24px;
@@ -108,6 +95,8 @@
   <label><input type="radio" name="bufferTarget" value="cool"> 무더위쉼터</label><br>
   <label><input type="radio" name="bufferTarget" value="subway"> 도시철도</label><br>
   <label><input type="radio" name="bufferTarget" value="olive"> 올리브영</label><br>
+
+  <!-- 추가 -->
   <label><input type="radio" name="bufferTarget" value="karaoke"> 단란/유흥주점</label><br>
   <label><input type="radio" name="bufferTarget" value="study"> 스터디카페</label><br>
   <label><input type="radio" name="bufferTarget" value="dust"> 먼지발생사업장</label><br>
@@ -154,8 +143,15 @@ var bufferLayer = L.layerGroup().addTo(map);
 
 var guLayer;
 var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
-var karaokeLayer, studyLayer, dustLayer, airLayer; // 🔥 추가
+var karaokeLayer, studyLayer, dustLayer, airLayer;
 var infantLayer, highFLayer, highMLayer, seniorLayer;
+
+// 🔥 안전 fetch
+function safeFetch(url) {
+  return fetch(url)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+}
 
 function getColor(val) {
   return val >= 100 ? '#800026' :
@@ -187,16 +183,18 @@ function getSelectedLayer() {
   const selected = document.querySelector('input[name="bufferTarget"]:checked');
   if (!selected) return null;
 
-  if (selected.value === "safehouse") return safehouseLayer;
-  if (selected.value === "cool") return coolLayer;
-  if (selected.value === "subway") return subwayLayer;
-  if (selected.value === "olive") return oliveLayer;
+  const mapObj = {
+    safehouse: safehouseLayer,
+    cool: coolLayer,
+    subway: subwayLayer,
+    olive: oliveLayer,
+    karaoke: karaokeLayer,
+    study: studyLayer,
+    dust: dustLayer,
+    air: airLayer
+  };
 
-  // 🔥 추가
-  if (selected.value === "karaoke") return karaokeLayer;
-  if (selected.value === "study") return studyLayer;
-  if (selected.value === "dust") return dustLayer;
-  if (selected.value === "air") return airLayer;
+  return mapObj[selected.value];
 }
 
 function updateBuffer() {
@@ -246,71 +244,67 @@ legend.onAdd = function () {
 };
 
 Promise.all([
-  fetch('gu.geojson').then(r => r.json()),
-  fetch('infant.geojson').then(r => r.json()),
-  fetch('high_f.geojson').then(r => r.json()),
-  fetch('high_m.geojson').then(r => r.json()),
-  fetch('senior.geojson').then(r => r.json()),
-  fetch('safehouse.geojson').then(r => r.json()),
-  fetch('cool.geojson').then(r => r.json()),
-  fetch('subway.geojson').then(r => r.json()),
-  fetch('olive.geojson').then(r => r.json()),
-
-  // 🔥 추가
-  fetch('karaoke.json').then(r => r.json()),
-  fetch('study.json').then(r => r.json()),
-  fetch('dust.json').then(r => r.json()),
-  fetch('air.json').then(r => r.json())
+  safeFetch('gu.geojson'),
+  safeFetch('infant.geojson'),
+  safeFetch('high_f.geojson'),
+  safeFetch('high_m.geojson'),
+  safeFetch('senior.geojson'),
+  safeFetch('safehouse.geojson'),
+  safeFetch('cool.geojson'),
+  safeFetch('subway.geojson'),
+  safeFetch('olive.geojson'),
+  safeFetch('karaoke.json'),
+  safeFetch('study.json'),
+  safeFetch('dust.json'),
+  safeFetch('air.json')
 ])
 .then(([guData, infantData, highFData, highMData, seniorData,
         safehouseData, coolData, subwayData, oliveData,
         karaokeData, studyData, dustData, airData]) => {
 
-  infantLayer = L.geoJSON(infantData, { style: populationStyle });
-  highFLayer = L.geoJSON(highFData, { style: populationStyle });
-  highMLayer = L.geoJSON(highMData, { style: populationStyle });
-  seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
+  if (infantData) infantLayer = L.geoJSON(infantData, { style: populationStyle });
+  if (highFData) highFLayer = L.geoJSON(highFData, { style: populationStyle });
+  if (highMData) highMLayer = L.geoJSON(highMData, { style: populationStyle });
+  if (seniorData) seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
 
-  guLayer = L.geoJSON(guData, {
-    style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
-  }).addTo(map);
+  if (guData) {
+    guLayer = L.geoJSON(guData, {
+      style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
+    }).addTo(map);
+  }
 
   function makeLayer(data){
-    return L.geoJSON(data, {
+    return data ? L.geoJSON(data, {
       pointToLayer:(f,latlng)=>L.marker(latlng),
       onEachFeature: bindSimplePopup
-    });
+    }) : null;
   }
 
   safehouseLayer = makeLayer(safehouseData);
   coolLayer = makeLayer(coolData);
   subwayLayer = makeLayer(subwayData);
   oliveLayer = makeLayer(oliveData);
-
-  // 🔥 추가
   karaokeLayer = makeLayer(karaokeData);
   studyLayer = makeLayer(studyData);
   dustLayer = makeLayer(dustData);
   airLayer = makeLayer(airData);
 
-  var baseLayers = {
-    "유아 인구": infantLayer,
-    "여고생 인구": highFLayer,
-    "남고생 인구": highMLayer,
-    "노년 인구": seniorLayer
-  };
+  var baseLayers = {};
+  if (infantLayer) baseLayers["유아 인구"] = infantLayer;
+  if (highFLayer) baseLayers["여고생 인구"] = highFLayer;
+  if (highMLayer) baseLayers["남고생 인구"] = highMLayer;
+  if (seniorLayer) baseLayers["노년 인구"] = seniorLayer;
 
-  var overlays = {
-    "행정구 경계": guLayer,
-    "아동안전지킴이집": safehouseLayer,
-    "무더위쉼터": coolLayer,
-    "도시철도": subwayLayer,
-    "올리브영": oliveLayer,
-    "단란/유흥주점": karaokeLayer,
-    "스터디카페": studyLayer,
-    "먼지발생사업장": dustLayer,
-    "대기오염배출시설": airLayer
-  };
+  var overlays = {};
+  if (guLayer) overlays["행정구 경계"] = guLayer;
+  if (safehouseLayer) overlays["아동안전지킴이집"] = safehouseLayer;
+  if (coolLayer) overlays["무더위쉼터"] = coolLayer;
+  if (subwayLayer) overlays["도시철도"] = subwayLayer;
+  if (oliveLayer) overlays["올리브영"] = oliveLayer;
+  if (karaokeLayer) overlays["단란/유흥주점"] = karaokeLayer;
+  if (studyLayer) overlays["스터디카페"] = studyLayer;
+  if (dustLayer) overlays["먼지발생사업장"] = dustLayer;
+  if (airLayer) overlays["대기오염배출시설"] = airLayer;
 
   L.control.layers(baseLayers, overlays, {
     collapsed:false,
