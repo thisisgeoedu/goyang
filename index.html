@@ -10,12 +10,10 @@
     body { margin: 0; }
     #map { height: 100vh; }
 
-    /* 레이어 패널 위치 */
     .leaflet-top.leaflet-left .leaflet-control-layers {
       margin-top: 60px;
     }
 
-    /* 버퍼 UI */
     #bufferUI {
       position: absolute;
       top: 10px;
@@ -26,10 +24,9 @@
       border-radius: 5px;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
       font-size: 13px;
-      width: 180px;
+      width: 200px;
     }
 
-    /* 🔥 안내 오버레이 */
     #introOverlay {
       position: fixed;
       top: 0;
@@ -79,7 +76,6 @@
       cursor: pointer;
     }
 
-    /* 범례 */
     .info.legend {
       background: white;
       padding: 10px;
@@ -104,14 +100,18 @@
 
 <div id="map"></div>
 
-<!-- 🔥 버퍼 UI -->
+<!-- 버퍼 UI -->
 <div id="bufferUI">
   <b>버퍼 분석</b><br><br>
 
   <label><input type="radio" name="bufferTarget" value="safehouse"> 아동안전지킴이집</label><br>
   <label><input type="radio" name="bufferTarget" value="cool"> 무더위쉼터</label><br>
   <label><input type="radio" name="bufferTarget" value="subway"> 도시철도</label><br>
-  <label><input type="radio" name="bufferTarget" value="olive"> 올리브영</label>
+  <label><input type="radio" name="bufferTarget" value="olive"> 올리브영</label><br>
+  <label><input type="radio" name="bufferTarget" value="karaoke"> 단란/유흥주점</label><br>
+  <label><input type="radio" name="bufferTarget" value="study"> 스터디카페</label><br>
+  <label><input type="radio" name="bufferTarget" value="dust"> 먼지발생사업장</label><br>
+  <label><input type="radio" name="bufferTarget" value="air"> 대기오염배출시설</label>
 
   <br><br>
 
@@ -124,7 +124,7 @@
   <button onclick="clearBuffer()" style="width:100%; margin-top:5px;">초기화</button>
 </div>
 
-<!-- 🔥 시작 안내 -->
+<!-- 시작 안내 -->
 <div id="introOverlay">
   <div id="introBox">
     <div class="intro-title">
@@ -143,176 +143,184 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-  var map = L.map('map').setView([37.659, 126.836], 15);
+var map = L.map('map').setView([37.659, 126.836], 15);
 
-  L.tileLayer(
-    'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
-    { maxZoom: 19 }
-  ).addTo(map);
+L.tileLayer(
+  'https://xdworld.vworld.kr/2d/Base/service/{z}/{x}/{y}.png',
+  { maxZoom: 19 }
+).addTo(map);
 
-  var bufferLayer = L.layerGroup().addTo(map);
+var bufferLayer = L.layerGroup().addTo(map);
 
-  var guLayer;
-  var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
-  var infantLayer, highFLayer, highMLayer, seniorLayer;
+var guLayer;
+var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
+var karaokeLayer, studyLayer, dustLayer, airLayer; // 🔥 추가
+var infantLayer, highFLayer, highMLayer, seniorLayer;
 
-  function getColor(val) {
-    return val >= 100 ? '#800026' :
-           val >= 75  ? '#BD0026' :
-           val >= 50  ? '#E31A1C' :
-           val >= 25  ? '#FC4E2A' :
-           val > 0    ? '#FD8D3C' :
-                        '#FFFFFF';
+function getColor(val) {
+  return val >= 100 ? '#800026' :
+         val >= 75  ? '#BD0026' :
+         val >= 50  ? '#E31A1C' :
+         val >= 25  ? '#FC4E2A' :
+         val > 0    ? '#FD8D3C' :
+                      '#FFFFFF';
+}
+
+function populationStyle(feature) {
+  var val = Number(feature.properties.val) || 0;
+  return {
+    fillColor: getColor(val),
+    fillOpacity: val === 0 ? 0 : 0.5,
+    stroke: false
+  };
+}
+
+function bindSimplePopup(feature, layer) {
+  let html = "";
+  for (let key in feature.properties) {
+    html += `<b>${key}</b>: ${feature.properties[key]}<br>`;
+  }
+  layer.bindPopup(html);
+}
+
+function getSelectedLayer() {
+  const selected = document.querySelector('input[name="bufferTarget"]:checked');
+  if (!selected) return null;
+
+  if (selected.value === "safehouse") return safehouseLayer;
+  if (selected.value === "cool") return coolLayer;
+  if (selected.value === "subway") return subwayLayer;
+  if (selected.value === "olive") return oliveLayer;
+
+  // 🔥 추가
+  if (selected.value === "karaoke") return karaokeLayer;
+  if (selected.value === "study") return studyLayer;
+  if (selected.value === "dust") return dustLayer;
+  if (selected.value === "air") return airLayer;
+}
+
+function updateBuffer() {
+  const layer = getSelectedLayer();
+  const distance = Number(document.getElementById("bufferDistance").value);
+
+  if (!layer) {
+    alert("대상을 선택하세요");
+    return;
   }
 
-  function populationStyle(feature) {
-    var val = Number(feature.properties.val) || 0;
-    return {
-      fillColor: getColor(val),
-      fillOpacity: val === 0 ? 0 : 0.5,
-      stroke: false
-    };
-  }
+  bufferLayer.clearLayers();
 
-  function bindSimplePopup(feature, layer) {
-    let html = "";
-    for (let key in feature.properties) {
-      html += `<b>${key}</b>: ${feature.properties[key]}<br>`;
+  layer.eachLayer(function(l) {
+    if (l.getLatLng) {
+      L.circle(l.getLatLng(), {
+        radius: distance,
+        fillColor: '#3388ff',
+        fillOpacity: 0.15,
+        stroke: false
+      }).addTo(bufferLayer);
     }
-    layer.bindPopup(html);
+  });
+}
+
+function clearBuffer() {
+  bufferLayer.clearLayers();
+}
+
+function closeIntro() {
+  document.getElementById("introOverlay").style.display = "none";
+}
+
+var legend = L.control({ position: 'bottomright' });
+legend.onAdd = function () {
+  var div = L.DomUtil.create('div', 'info legend');
+  var grades = [0,25,50,75,100];
+  div.innerHTML += '<b>인구 (명)</b><br>';
+  for (var i=0;i<grades.length;i++){
+    var from = grades[i];
+    var to = grades[i+1];
+    div.innerHTML +=
+      '<i style="background:' + getColor(from+1) + '"></i> ' +
+      from + (to ? '&ndash;' + to : '+') + '<br>';
   }
+  return div;
+};
 
-  function getSelectedLayer() {
-    const selected = document.querySelector('input[name="bufferTarget"]:checked');
-    if (!selected) return null;
+Promise.all([
+  fetch('gu.geojson').then(r => r.json()),
+  fetch('infant.geojson').then(r => r.json()),
+  fetch('high_f.geojson').then(r => r.json()),
+  fetch('high_m.geojson').then(r => r.json()),
+  fetch('senior.geojson').then(r => r.json()),
+  fetch('safehouse.geojson').then(r => r.json()),
+  fetch('cool.geojson').then(r => r.json()),
+  fetch('subway.geojson').then(r => r.json()),
+  fetch('olive.geojson').then(r => r.json()),
 
-    if (selected.value === "safehouse") return safehouseLayer;
-    if (selected.value === "cool") return coolLayer;
-    if (selected.value === "subway") return subwayLayer;
-    if (selected.value === "olive") return oliveLayer;
-  }
+  // 🔥 추가
+  fetch('karaoke.json').then(r => r.json()),
+  fetch('study.json').then(r => r.json()),
+  fetch('dust.json').then(r => r.json()),
+  fetch('air.json').then(r => r.json())
+])
+.then(([guData, infantData, highFData, highMData, seniorData,
+        safehouseData, coolData, subwayData, oliveData,
+        karaokeData, studyData, dustData, airData]) => {
 
-  function updateBuffer() {
-    const layer = getSelectedLayer();
-    const distance = Number(document.getElementById("bufferDistance").value);
+  infantLayer = L.geoJSON(infantData, { style: populationStyle });
+  highFLayer = L.geoJSON(highFData, { style: populationStyle });
+  highMLayer = L.geoJSON(highMData, { style: populationStyle });
+  seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
 
-    if (!layer) {
-      alert("대상을 선택하세요");
-      return;
-    }
+  guLayer = L.geoJSON(guData, {
+    style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
+  }).addTo(map);
 
-    bufferLayer.clearLayers();
-
-    layer.eachLayer(function(l) {
-      if (l.getLatLng) {
-        L.circle(l.getLatLng(), {
-          radius: distance,
-          fillColor: '#3388ff',
-          fillOpacity: 0.15,
-          stroke: false
-        }).addTo(bufferLayer);
-      } else if (l.getBounds) {
-        const center = l.getBounds().getCenter();
-        L.circle(center, {
-          radius: distance,
-          fillColor: '#3388ff',
-          fillOpacity: 0.15,
-          stroke: false
-        }).addTo(bufferLayer);
-      }
+  function makeLayer(data){
+    return L.geoJSON(data, {
+      pointToLayer:(f,latlng)=>L.marker(latlng),
+      onEachFeature: bindSimplePopup
     });
   }
 
-  function clearBuffer() {
-    bufferLayer.clearLayers();
-  }
+  safehouseLayer = makeLayer(safehouseData);
+  coolLayer = makeLayer(coolData);
+  subwayLayer = makeLayer(subwayData);
+  oliveLayer = makeLayer(oliveData);
 
-  function closeIntro() {
-    document.getElementById("introOverlay").style.display = "none";
-  }
+  // 🔥 추가
+  karaokeLayer = makeLayer(karaokeData);
+  studyLayer = makeLayer(studyData);
+  dustLayer = makeLayer(dustData);
+  airLayer = makeLayer(airData);
 
-  var legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function () {
-    var div = L.DomUtil.create('div', 'info legend');
-    var grades = [0,25,50,75,100];
-    div.innerHTML += '<b>인구 (명)</b><br>';
-    for (var i=0;i<grades.length;i++){
-      var from = grades[i];
-      var to = grades[i+1];
-      div.innerHTML +=
-        '<i style="background:' + getColor(from+1) + '"></i> ' +
-        from + (to ? '&ndash;' + to : '+') + '<br>';
-    }
-    return div;
+  var baseLayers = {
+    "유아 인구": infantLayer,
+    "여고생 인구": highFLayer,
+    "남고생 인구": highMLayer,
+    "노년 인구": seniorLayer
   };
 
-  Promise.all([
-    fetch('gu.geojson').then(r => r.json()),
-    fetch('infant.geojson').then(r => r.json()),
-    fetch('high_f.geojson').then(r => r.json()),
-    fetch('high_m.geojson').then(r => r.json()),
-    fetch('senior.geojson').then(r => r.json()),
-    fetch('safehouse.geojson').then(r => r.json()),
-    fetch('cool.geojson').then(r => r.json()),
-    fetch('subway.geojson').then(r => r.json()),
-    fetch('olive.geojson').then(r => r.json())
-  ])
-  .then(([guData, infantData, highFData, highMData, seniorData, safehouseData, coolData, subwayData, oliveData]) => {
+  var overlays = {
+    "행정구 경계": guLayer,
+    "아동안전지킴이집": safehouseLayer,
+    "무더위쉼터": coolLayer,
+    "도시철도": subwayLayer,
+    "올리브영": oliveLayer,
+    "단란/유흥주점": karaokeLayer,
+    "스터디카페": studyLayer,
+    "먼지발생사업장": dustLayer,
+    "대기오염배출시설": airLayer
+  };
 
-    infantLayer = L.geoJSON(infantData, { style: populationStyle });
-    highFLayer = L.geoJSON(highFData, { style: populationStyle });
-    highMLayer = L.geoJSON(highMData, { style: populationStyle });
-    seniorLayer = L.geoJSON(seniorData, { style: populationStyle });
+  L.control.layers(baseLayers, overlays, {
+    collapsed:false,
+    position:'topleft'
+  }).addTo(map);
+});
 
-    guLayer = L.geoJSON(guData, {
-      style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
-    }).addTo(map);
-
-    safehouseLayer = L.geoJSON(safehouseData, {
-      pointToLayer:(f,latlng)=>L.marker(latlng),
-      onEachFeature: bindSimplePopup
-    });
-
-    coolLayer = L.geoJSON(coolData, {
-      pointToLayer:(f,latlng)=>L.marker(latlng),
-      onEachFeature: bindSimplePopup
-    });
-
-    subwayLayer = L.geoJSON(subwayData, {
-      pointToLayer:(f,latlng)=>L.marker(latlng),
-      onEachFeature: bindSimplePopup
-    });
-
-    oliveLayer = L.geoJSON(oliveData, {
-      pointToLayer:(f,latlng)=>L.marker(latlng),
-      onEachFeature: bindSimplePopup
-    });
-
-    var baseLayers = {
-      "유아 인구": infantLayer,
-      "여고생 인구": highFLayer,
-      "남고생 인구": highMLayer,
-      "노년 인구": seniorLayer
-    };
-
-    var overlays = {
-      "행정구 경계": guLayer,
-      "아동안전지킴이집": safehouseLayer,
-      "무더위쉼터": coolLayer,
-      "도시철도": subwayLayer,
-      "올리브영": oliveLayer
-    };
-
-    L.control.layers(baseLayers, overlays, {
-      collapsed:false,
-      position:'topleft'
-    }).addTo(map);
-  });
-
-  map.on('baselayerchange', function() {
-    legend.addTo(map);
-  });
-
+map.on('baselayerchange', function() {
+  legend.addTo(map);
+});
 </script>
 
 </body>
