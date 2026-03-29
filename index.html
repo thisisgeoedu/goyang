@@ -154,7 +154,7 @@ var bufferLayer = L.layerGroup().addTo(map);
 
 var guLayer;
 var safehouseLayer, coolLayer, subwayLayer, oliveLayer;
-var karaokeLayer, studyLayer, dustLayer, airLayer; // 🔥 추가
+var karaokeLayer, studyLayer, dustLayer, airLayer;
 var infantLayer, highFLayer, highMLayer, seniorLayer;
 
 function getColor(val) {
@@ -258,11 +258,14 @@ Promise.all([
   fetch('karaoke.geojson').then(r => r.json()),
   fetch('study.geojson').then(r => r.json()),
   fetch('dust.geojson').then(r => r.json()),
-  fetch('air.geojson').then(r => r.json())
+  fetch('air.geojson').then(r => r.json()),
+  fetch('greenbelt.geojson').then(r => r.json()),
+  fetch('military.json').then(r => r.json())
 ])
 .then(([guData, infantData, highFData, highMData, seniorData,
         safehouseData, coolData, subwayData, oliveData,
-        karaokeData, studyData, dustData, airData]) => {
+        karaokeData, studyData, dustData, airData,
+       greenbeltData, militaryData]) => {
 
   infantLayer = L.geoJSON(infantData, { style: populationStyle });
   highFLayer = L.geoJSON(highFData, { style: populationStyle });
@@ -273,6 +276,26 @@ Promise.all([
     style: { color:"#000", weight:3, dashArray:"6,6", fillOpacity:0 }
   }).addTo(map);
 
+var greenbeltLayer = L.geoJSON(greenbeltData, {
+  style: {
+    stroke: false,
+    fillColor: "#A5D6A7",
+    fillOpacity: 0.25
+  },
+  onEachFeature: bindSimplePopup
+});
+
+var militaryLayer = L.geoJSON(militaryData, {
+  style: {
+    stroke: false, 
+    fillColor: "#1B5E20",
+    fillOpacity: 0.35
+  },
+  onEachFeature: bindSimplePopup
+});
+
+
+  
   safehouseLayer = L.geoJSON(safehouseData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   coolLayer = L.geoJSON(coolData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   subwayLayer = L.geoJSON(subwayData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
@@ -282,6 +305,8 @@ Promise.all([
   dustLayer = L.geoJSON(dustData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
   airLayer = L.geoJSON(airData,{pointToLayer:(f,l)=>L.marker(l),onEachFeature:bindSimplePopup});
 
+
+  
   var baseLayers = {
     "유아 인구": infantLayer,
     "여고생 인구": highFLayer,
@@ -291,6 +316,8 @@ Promise.all([
 
   var overlays = {
     "행정구 경계": guLayer,
+    "개발제한구역": greenbeltLayer,
+    "군사보호구역": militaryLayer,
     "단란/유흥주점": karaokeLayer,
     "대기오염배출시설": airLayer,
     "도시철도": subwayLayer,
